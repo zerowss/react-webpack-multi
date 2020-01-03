@@ -57,13 +57,14 @@ const resolveModule = (resolveFn, filePath) => {
   const extension = moduleFileExtensions.find(extension =>
     fs.existsSync(resolveFn(`${filePath}.${extension}`))
   );
-
+  
   if (extension) {
     return resolveFn(`${filePath}.${extension}`);
   }
 
   return resolveFn(`${filePath}.js`);
 };
+
 
 // config after eject: we're in ./config/
 module.exports = {
@@ -83,6 +84,7 @@ module.exports = {
   appNodeModules: resolveApp('node_modules'),
   publicUrl: getPublicUrl(resolveApp('package.json')),
   servedPath: getServedPath(resolveApp('package.json')),
+  getEntryJs: (entryPath) => resolveModule(resolveApp, entryPath)
 };
 
 

@@ -26,6 +26,7 @@ const formatWebpackMessages = require('react-dev-utils/formatWebpackMessages');
 const printHostingInstructions = require('react-dev-utils/printHostingInstructions');
 const FileSizeReporter = require('react-dev-utils/FileSizeReporter');
 const printBuildError = require('react-dev-utils/printBuildError');
+const utils = require('../config/utils');
 
 const measureFileSizesBeforeBuild =
   FileSizeReporter.measureFileSizesBeforeBuild;
@@ -39,12 +40,13 @@ const WARN_AFTER_CHUNK_GZIP_SIZE = 1024 * 1024;
 const isInteractive = process.stdout.isTTY;
 
 // Warn and crash if required files are missing
-if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {
+if (!checkRequiredFiles([utils.entryPath])) {
+  console.log(chalk.red('--path required'));
   process.exit(1);
 }
 
 // Generate configuration
-const config = configFactory('production');
+const config = configFactory('production', utils.entryJsPath);
 
 // We require that you explicitly set browsers and do not fall back to
 // browserslist defaults.
@@ -58,7 +60,7 @@ checkBrowsers(paths.appPath, isInteractive)
   .then(previousFileSizes => {
     // Remove all content but keep the directory so that
     // if you're in it, you don't end up in Trash
-    fs.emptyDirSync(paths.appBuild);
+    fs.emptyDirSync(utils.emptyDir);
     // Merge with the public folder
     copyPublicFolder();
     // Start the webpack build
