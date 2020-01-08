@@ -31,12 +31,14 @@ const openBrowser = require('react-dev-utils/openBrowser');
 const paths = require('../config/paths');
 const configFactory = require('../config/webpack.config');
 const createDevServerConfig = require('../config/webpackDevServer.config');
+const utils = require('../config/utils');
 
 const useYarn = fs.existsSync(paths.yarnLockFile);
 const isInteractive = process.stdout.isTTY;
 
 // Warn and crash if required files are missing
-if (!checkRequiredFiles([paths.appHtml, paths.appIndexJs])) {
+if (!checkRequiredFiles([utils.entryPath])) {
+  console.log(chalk.red('--path required'));
   process.exit(1);
 }
 
@@ -75,7 +77,7 @@ checkBrowsers(paths.appPath, isInteractive)
       // We have not found a port.
       return;
     }
-    const config = configFactory('development');
+    const config = configFactory('development', utils.entryJsPath);
     const protocol = process.env.HTTPS === 'true' ? 'https' : 'http';
     const appName = require(paths.appPackageJson).name;
     const useTypeScript = fs.existsSync(paths.appTsConfig);
@@ -130,6 +132,7 @@ checkBrowsers(paths.appPath, isInteractive)
 
       console.log(chalk.cyan('Starting the development server...\n'));
       openBrowser(urls.localUrlForBrowser);
+      openBrowser(process.env.NEW_DOMAIN);
     });
 
     ['SIGINT', 'SIGTERM'].forEach(function(sig) {

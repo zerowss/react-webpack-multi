@@ -22,6 +22,8 @@ const getClientEnvironment = require('./env');
 const ModuleNotFoundPlugin = require('react-dev-utils/ModuleNotFoundPlugin');
 const ForkTsCheckerWebpackPlugin = require('react-dev-utils/ForkTsCheckerWebpackPlugin');
 const typescriptFormatter = require('react-dev-utils/typescriptFormatter');
+const { dllPlugin, dllFiles, globalVars } = require('./utils');
+const AntdDayjsWebpackPlugin = require('antd-dayjs-webpack-plugin');
 
 const postcssNormalize = require('postcss-normalize');
 
@@ -45,7 +47,8 @@ const cssRegex = /\.css$/;
 const cssModuleRegex = /\.module\.css$/;
 const sassRegex = /\.(scss|sass)$/;
 const sassModuleRegex = /\.module\.(scss|sass)$/;
-
+const lessRegex = /\.less$/;
+const lessModuleRegex = /\.module\.less$/;
 // This is the production and development configuration.
 // It is focused on developer experience, fast rebuilds, and a minimal bundle.
 module.exports = function(webpackEnv,entrtJs) {
@@ -115,6 +118,13 @@ module.exports = function(webpackEnv,entrtJs) {
       },
     ].filter(Boolean);
     if (preProcessor) {
+      let lessOptions = {};
+      if (preProcessor === 'less-loader'){
+        lessOptions = {
+          modifyVars: globalVars,
+          javascriptEnabled: true
+        }
+      }
       loaders.push(
         {
           loader: require.resolve('resolve-url-loader'),
@@ -126,6 +136,7 @@ module.exports = function(webpackEnv,entrtJs) {
           loader: require.resolve(preProcessor),
           options: {
             sourceMap: true,
+            ...lessOptions
           },
         }
       );
@@ -163,7 +174,7 @@ module.exports = function(webpackEnv,entrtJs) {
         : isEnvDevelopment && 'static/js/[name].chunk.js',
       // We inferred the "public path" (such as / or /my-project) from homepage.
       // We use "/" in development.
-      publicPath: publicPath,
+      publicPath: isEnvProduction ? '/scripts/react-modules' : publicPath,
       // Point sourcemap entries to original disk location (format as URL on Windows)
       devtoolModuleFilenameTemplate: isEnvProduction
         ? info =>
@@ -179,6 +190,11 @@ module.exports = function(webpackEnv,entrtJs) {
       // module chunks which are built will work in web workers as well.
       globalObject: 'this',
     },
+    // externals: {
+    //   'react': 'react',
+    //   'react-dom': 'ReactDOM',
+    //   'axios': 'axios'
+    // },
     optimization: {
       minimize: isEnvProduction,
       minimizer: [
@@ -245,14 +261,14 @@ module.exports = function(webpackEnv,entrtJs) {
       // https://medium.com/webpack/webpack-4-code-splitting-chunk-graph-and-the-splitchunks-optimization-be739a861366
       splitChunks: {
         chunks: 'all',
-        name: false,
+        name: Object.keys(entrtJs)[0] + '/common'
       },
       // Keep the runtime chunk separated to enable long term caching
       // https://twitter.com/wSokra/status/969679223278505985
       // https://github.com/facebook/create-react-app/issues/5358
-      runtimeChunk: {
-        name: entrypoint => `runtime-${entrypoint.name}`,
-      },
+      // runtimeChunk: {
+      //   name: entrypoint => `runtime-${entrypoint.name}`,
+      // },
     },
     resolve: {
       // This allows you to set a fallback for where Webpack should look for modules.
@@ -280,6 +296,12 @@ module.exports = function(webpackEnv,entrtJs) {
           'react-dom$': 'react-dom/profiling',
           'scheduler/tracing': 'scheduler/tracing-profiling',
         }),
+        '@': paths.resolveApp('src'),
+        'src': paths.resolveApp('src'),
+        'utils': paths.resolveApp('src/utils'),
+        'plugins': paths.resolveApp('src/plugins'),
+        'common': paths.resolveApp('src/common'),
+        'components': paths.resolveApp('src/components'),
         ...(modules.webpackAliases || {}),
       },
       plugins: [
@@ -468,6 +490,38 @@ module.exports = function(webpackEnv,entrtJs) {
                 'sass-loader'
               ),
             },
+            //less
+            {
+              test: lessRegex,
+              exclude: lessModuleRegex,
+              use: getStyleLoaders(
+                {
+                  importLoaders: 1,
+                  sourceMap: isEnvProduction && shouldUseSourceMap,
+                },
+                'less-loader'
+              ),
+              // Don't consider CSS imports dead code even if the
+              // containing package claims to have no side effects.
+              // Remove this when webpack adds a warning or an error for this.
+              // See https://github.com/webpack/webpack/issues/6571
+              sideEffects: true,
+            },
+            // Adds support for CSS Modules, but using SASS
+            // using the extension .module.scss or .module.sass
+            {
+              test: lessModuleRegex,
+              use: getStyleLoaders(
+                {
+                  importLoaders: 2,
+                  sourceMap: isEnvProduction && shouldUseSourceMap,
+                  modules: {
+                    getLocalIdent: getCSSModuleLocalIdent,
+                  },
+                },
+                'less-loader'
+              ),
+            },
             // "file" loader makes sure those assets get served by WebpackDevServer.
             // When you `import` an asset, you get its (virtual) filename.
             // In production, they would get copied to the `build` folder.
@@ -491,6 +545,8 @@ module.exports = function(webpackEnv,entrtJs) {
       ],
     },
     plugins: [
+      new AntdDayjsWebpackPlugin(),
+      ...dllPlugin(),
       // Generates an `index.html` file with the <script> injected.
       new HtmlWebpackPlugin(
         Object.assign(
@@ -498,6 +554,7 @@ module.exports = function(webpackEnv,entrtJs) {
           {
             inject: true,
             template: paths.appHtml,
+            ...dllFiles()
           },
           isEnvProduction
             ? {

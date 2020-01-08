@@ -75,6 +75,8 @@ module.exports = {
   appHtml: resolveApp('public/index.html'),
   appIndexJs: resolveModule(resolveApp, 'src/index'),
   appPackageJson: resolveApp('package.json'),
+  dllConfig: resolveApp('config/dll.config.js'),
+  dllPublic: resolveApp('public/dll'),
   appSrc: resolveApp('src'),
   appTsConfig: resolveApp('tsconfig.json'),
   appJsConfig: resolveApp('jsconfig.json'),
@@ -84,9 +86,11 @@ module.exports = {
   appNodeModules: resolveApp('node_modules'),
   publicUrl: getPublicUrl(resolveApp('package.json')),
   servedPath: getServedPath(resolveApp('package.json')),
+  themePath: resolveApp('src/theme/theme.less'),
   getEntryJs: (entryPath) => resolveModule(resolveApp, entryPath)
 };
 
 
 
 module.exports.moduleFileExtensions = moduleFileExtensions;
+module.exports.resolveApp = resolveApp;
